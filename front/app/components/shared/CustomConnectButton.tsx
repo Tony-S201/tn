@@ -12,7 +12,7 @@ const CustomConnectButton: React.FunctionComponent = (): JSX.Element => {
             {(() => {
               if (!connected) {
                 return (
-                  <button onClick={openConnectModal} type="button" className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-full">
+                  <button onClick={openConnectModal} type="button" className="bg-indigo-600 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-full">
                     Connect Wallet
                   </button>
                 );

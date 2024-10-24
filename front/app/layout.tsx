@@ -33,7 +33,7 @@ export default function RootLayout({
       >
         <RainbowKitAndWagmiProvider>
           <Navigation />
-          <main>{children}</main>
+          <main className="min-h-screen flex flex-col mt-20">{children}</main>
           <Footer />
         </RainbowKitAndWagmiProvider>
       </body>
