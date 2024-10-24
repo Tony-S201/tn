@@ -1,0 +1,68 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  tests:
+    name: Smart Contract Tests
+    if: contains(github.event.head_commit.message, '@test')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Use Node.js 20.12.2
+        uses: actions/setup-node@v1
+        with:
+          node-version: 20.12.2
+
+      - name: Cache Node Modules
+        id: cache-node-modules
+        uses: actions/cache@v2
+        with:
+          path: 'back/node_modules'
+          key: node_modules-${{ hashFiles('back/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+        working-directory: ./back
+
+      - name: Run Tests
+        run: yarn hardhat test
+        working-directory: ./back
+
+  slither:
+    name: Slither Tests
+    if: contains(github.event.head_commit.message, '@slither')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Use Node.js 22.2.0
+        uses: actions/setup-node@v1
+        with:
+          node-version: 22.2.0
+
+      - name: Install Slither
+        run: |
+          pip install slither-analyzer
+        working-directory: ./back
+
+      - name: Create Slither Config
+        run: |
+          echo '{"detectors_to_exclude": ["solc-version", "low-level-calls"]}' > slither.config.json
+        working-directory: ./back
+
+      - name: Update dependencies
+        run: |
+          yarn install
+        working-directory: ./back 
+
+      - name: Slither Analyse
+        run: |
+          slither . --filter-paths "openzeppelin"
+        working-directory: ./back
