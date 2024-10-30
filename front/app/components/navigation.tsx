@@ -20,6 +20,17 @@ const navigation: NavigationItems[] = [
   { name: 'Support', href: '/support' }
 ];
 
+const GitBookIcon: React.FunctionComponent = (): JSX.Element => {
+  return(
+    <Link href="https://tokennest.gitbook.io/tokennest">
+      <img 
+        src="https://tokennest.gitbook.io/~gitbook/static/icons/svgs/custom-icons/gitbook.svg?v=2"
+        className="size-5 cursor-pointer"
+      />
+    </Link>
+  )
+}
+
 const Navigation: React.FunctionComponent = (): JSX.Element => {
 
   const path = usePathname();
@@ -53,6 +64,7 @@ const Navigation: React.FunctionComponent = (): JSX.Element => {
               {item.name}
             </Link>
           ))}
+          <GitBookIcon/>
         </div>
         <div className="hidden lg:flex lg:flex-1 lg:justify-end lg:justify-items-center lg:items-center text-sm font-semibold leading-6">
           <CustomConnectButton />
