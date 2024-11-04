@@ -22,17 +22,17 @@ jobs:
         id: cache-node-modules
         uses: actions/cache@v2
         with:
-          path: 'back/node_modules'
-          key: node_modules-${{ hashFiles('back/package-lock.json') }}
+          path: 'blockchain/node_modules'
+          key: node_modules-${{ hashFiles('blockchain/package-lock.json') }}
 
       - name: Install dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: yarn install --frozen-lockfile
-        working-directory: ./back
+        working-directory: ./blockchain
 
       - name: Run Tests
         run: yarn hardhat test
-        working-directory: ./back
+        working-directory: ./blockchain
 
   slither:
     name: Slither Tests
@@ -50,19 +50,19 @@ jobs:
       - name: Install Slither
         run: |
           pip install slither-analyzer
-        working-directory: ./back
+        working-directory: ./blockchain
 
       - name: Create Slither Config
         run: |
           echo '{"detectors_to_exclude": ["solc-version", "low-level-calls"]}' > slither.config.json
-        working-directory: ./back
+        working-directory: ./blockchain
 
       - name: Update dependencies
         run: |
           yarn install
-        working-directory: ./back 
+        working-directory: ./blockchain 
 
       - name: Slither Analyse
         run: |
           slither . --filter-paths "openzeppelin"
-        working-directory: ./back
+        working-directory: ./blockchain
