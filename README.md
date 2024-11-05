@@ -8,6 +8,7 @@ TokenNest is a decentralized staking platform on Polygon.
 
 The Front-End stack is:
 - NextJS (React)
+- TypeScript
 - TailwindCSS
 - MaterialUI
 - RainbowKit
