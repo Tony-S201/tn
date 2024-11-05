@@ -6,13 +6,15 @@ TokenNest is a decentralized staking platform on Polygon.
 
 ## Front-End
 
-The Front-End stack is:
-- NextJS (React)
-- TypeScript
-- TailwindCSS
-- MaterialUI
-- RainbowKit
-- Viem (Wagmi)
+Stack:
+
+![NextJS](https://img.shields.io/badge/NextJS-000000?style=for-the-badge&logo=next.js)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![MaterialUI](https://img.shields.io/badge/MaterialUI-0081CB?style=for-the-badge&logo=mui&logoColor=white)
+![RainbowKit](https://img.shields.io/badge/RainbowKit-000000?style=for-the-badge)
+![Viem](https://img.shields.io/badge/Viem-Wagmi-blue?style=for-the-badge)
 
 **Necessary Environment Variables:**
 - NEXT_PUBLIC_WALLET_CONNECT_ID
@@ -31,11 +33,12 @@ $ yarn run build
 
 ## Backend
 
-The Back-End stack is:
-- NodeJS
-- ExpressJS
-- MongoDB as DB
-- Mongoose as ODM
+Stack:
+
+![NodeJS](https://img.shields.io/badge/NodeJS-339933?style=for-the-badge&logo=node.js&logoColor=white)
+![ExpressJS](https://img.shields.io/badge/ExpressJS-000000?style=for-the-badge&logo=express&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
+![Mongoose](https://img.shields.io/badge/Mongoose-880000?style=for-the-badge)
 
 **Required:**
 - Install mongodb on your machine
@@ -53,12 +56,11 @@ $ node app.js
 
 ## Blockchain
 
-The Blockchain stack is:
+Stack:
 
-- Hardhat
-- Chai (smart contract unit tests)
-- Hardhat Ignition for contract deployment
-- Solidity
+![Hardhat](https://img.shields.io/badge/Hardhat-FFCC2F?style=for-the-badge)
+![Chai](https://img.shields.io/badge/Chai-A30701?style=for-the-badge&logo=chai&logoColor=white)
+![Solidity](https://img.shields.io/badge/Solidity-363636?style=for-the-badge&logo=solidity&logoColor=white)
 
 **Necessary Environment Variables:**
 
