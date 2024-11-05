@@ -73,6 +73,9 @@ Stack:
 // Compile contracts (after each contract edit)
 $ yarn hardhat compile
 
+// Run local hardhat node
+$ yarn hardhat node
+
 // Run tests
 $ yarn hardhat test
 
