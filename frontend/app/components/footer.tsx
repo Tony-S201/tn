@@ -1,6 +1,11 @@
+import { stakingAddress } from "@/app/constants/tokens";
+
 const Footer: React.FunctionComponent = (): JSX.Element => {
+  
+  const a = stakingAddress;
+  
   return (
-    <div>footer</div>
+    <div>{a}</div>
   )
 }
 
