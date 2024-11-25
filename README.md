@@ -19,6 +19,9 @@ Stack:
 **Necessary Environment Variables:**
 - NEXT_PUBLIC_WALLET_CONNECT_ID
 - NEXT_PUBLIC_API_URL
+- NEXT_PUBLIC_NEST_ADDRESS (contract address)
+- NEXT_PUBLIC_STNEST_ADDRESS (contract address)
+- NEXT_PUBLIC_STAKING_ADDRESS (contract address)
 
 Configuration .env file:
 ```bash
