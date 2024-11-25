@@ -18,17 +18,36 @@ Stack:
 
 **Necessary Environment Variables:**
 - NEXT_PUBLIC_WALLET_CONNECT_ID
+- NEXT_PUBLIC_API_URL
 
-**Start Front-End:**
-
+Configuration .env file:
+```bash
+# Put your node server backend URL
+NEXT_PUBLIC_API_URL="http://localhost:5000"
+# Put your wallet connect ID
+NEXT_PUBLIC_WALLET_CONNECT_ID="myid"
 ```
+
+Setup:
+```bash
+# Install dependencies
+$ yarn install
+# or
+$ npm install
+```
+```bash
+# Start application
 $ yarn run dev
+# or
+$ npm run dev
 ```
 
 **Build app for production:**
 
-```
+```bash
 $ yarn run build
+# or
+$ npm run build
 ```
 
 ## Backend
@@ -40,17 +59,39 @@ Stack:
 ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
 ![Mongoose](https://img.shields.io/badge/Mongoose-880000?style=for-the-badge)
 
-**Required:**
-- Install mongodb on your machine
-- Create a DATABASE using mongo commands
+Requirements:
+- Node
+- Mongodb
 
-**Necessary Environment Variables:**
-- PORT
-- MONGO_URL
+Create a database using mongodb:
+```bash
+# Start mongod service
+$ sudo service mongod start
 
-**Start Node Server:**
+# Enter in mongo
+$ mongo
+
+# Create a database
+> use my_database_name
 ```
-$ npm install (first time)
+
+Configuration .env file:
+```bash
+# Default 5000
+PORT=
+# You can use "mongo" command to get the ip_address
+# You can use "show dbs" command into mongo to get the database name
+MONGO_URL="mongodb://ip_address:27017/my_database_name"
+# Default value "http://localhost:3000"
+FRONT_URL=""
+```
+
+Setup:
+```bash
+# Dependencies installation
+$ npm install
+
+# Run server application
 $ node app.js
 ```
 
