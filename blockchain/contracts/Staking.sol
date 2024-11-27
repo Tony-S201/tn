@@ -13,7 +13,7 @@ contract Staking {
     }
 
     mapping(address => StakeInfo) public stakes; // StakeInfo for each address
-    uint256 constant REWARD_RATE = 100; // Reward rate
+    uint256 constant REWARD_RATE = 1000; // Reward rate, 10% daily
 
     event Staked(address staker, uint amount);
     event Withdraw(address staker, uint _amount, uint _rewards);
@@ -47,13 +47,18 @@ contract Staking {
         StakeInfo memory userStakeInfo = stakes[_user];
         if (userStakeInfo.amount == 0) return 0;
 
-        uint256 timeElapsed = block.timestamp - userStakeInfo.timestamp;
-        return (userStakeInfo.amount * REWARD_RATE * timeElapsed);
+        uint256 currentDay = block.timestamp / 86400;
+        uint256 stakingDay = userStakeInfo.timestamp / 86400;
+        uint256 daysElapsed = currentDay - stakingDay;
+
+        return (userStakeInfo.amount * REWARD_RATE * daysElapsed) / 10000;
     }
 
     function withdraw(uint256 _amount) external {
         uint256 stakedAmount = stakes[msg.sender].amount;
-        require(stakedAmount > 0, "Staked amount must be higher than 0"); // Check staked amount
+        
+        require(stakedAmount > 0, "Staked amount must be higher than 0");
+        require(_amount <= stakedAmount, "Withdrawal amount exceeds staked amount");
 
         uint256 rewards = calcRewards(msg.sender); // Get reward amount
 
