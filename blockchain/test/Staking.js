@@ -5,7 +5,7 @@ const {
 const { expect } = require("chai");
 
 // Constants
-const REWARD_RATE = 100;
+const REWARD_RATE = 1000;
 
 describe("Staking contract", function () {
   // We define a fixture to reuse the same setup in every test.
@@ -140,10 +140,10 @@ describe("Staking contract", function () {
       // Move time forward by 1 day
       await time.increase(24 * 60 * 60);
 
-      // Convert all numbers to BigInt before multiplication
-      const expectedRewards = amount * BigInt(REWARD_RATE) * BigInt(86400); // 86400 represents seconds in a day
+      // Calculate expected rewards: (amount * REWARD_RATE * days) / 10000
+      const expectedRewards = (amount * BigInt(REWARD_RATE) * BigInt(1)) / BigInt(10000);
 
-      // Get calculated rewards
+      // Get calculated rewards from contract
       const rewards = await staking.calcRewards(owner.address);
 
       // Compare with small margin of error for time variations
@@ -164,8 +164,8 @@ describe("Staking contract", function () {
       // Move time forward by 10 days
       await time.increase(24 * 60 * 60 * 10);
 
-      // Convert all numbers to BigInt before multiplication
-      const expectedRewards = amount * BigInt(REWARD_RATE) * BigInt(864000); // 864000 represents seconds in 10 days
+      // Calculate expected rewards: (amount * REWARD_RATE * days) / 10000
+      const expectedRewards = (amount * BigInt(REWARD_RATE) * BigInt(10)) / BigInt(10000);
 
       // Get calculated rewards
       const rewards = await staking.calcRewards(owner.address);
@@ -269,26 +269,140 @@ describe("Staking contract", function () {
         .to.be.equal(expectedRewards);
     });
 
-    it("Should update stake amount correctly after partial withdrawal", async function () {});
-    it("Should emit Withdraw event with correct parameters", async function () {});
+    it("Should update stake amount correctly after partial withdrawal", async function () {
+      const { owner, staking, nest } = await loadFixture(deployStakingFixture);
+      const stakeAmount = ethers.parseEther("100");
+      const withdrawAmount = ethers.parseEther("40");
+
+      // Approve and stake
+      await nest.connect(owner).approve(staking.target, stakeAmount);
+      await staking.connect(owner).staking(stakeAmount);
+
+      // Partial withdraw
+      await staking.connect(owner).withdraw(withdrawAmount);
+
+      // Check final amount
+      const remainingStake = await staking.stakes(owner.address);
+      expect(remainingStake.amount).to.equal(stakeAmount - withdrawAmount);
+    });
+
+    it("Should emit Withdraw event with correct parameters", async function () {
+      const { owner, staking, nest } = await loadFixture(deployStakingFixture);
+      const amount = ethers.parseEther("100");
+
+      await nest.connect(owner).approve(staking.target, amount);
+      await staking.connect(owner).staking(amount);
+
+      await time.increase(24 * 60 * 60); // 1 day
+      const expectedRewards = await staking.calcRewards(owner.address);
+
+      await expect(staking.connect(owner).withdraw(amount))
+          .to.emit(staking, "Withdraw")
+          .withArgs(owner.address, amount, expectedRewards);
+    });
+
   });
 
   describe("Integration Tests", function () {
-    it("Should handle stake, wait, withdraw cycle correctly", async function () {});
-    it("Should handle multiple stakes from same user", async function () {});
-    it("Should handle multiple users staking and withdrawing", async function () {});
+    it("Should handle multiple stakes from same user", async function () {
+      const { owner, staking, nest } = await loadFixture(deployStakingFixture);
+      const amount1 = ethers.parseEther("50");
+      const amount2 = ethers.parseEther("30");
+
+      await nest.connect(owner).approve(staking.target, amount1 + amount2);
+
+      await staking.connect(owner).staking(amount1);
+      await staking.connect(owner).staking(amount2);
+
+      const finalStake = await staking.stakes(owner.address);
+      expect(finalStake.amount).to.equal(amount1 + amount2);
+    });
+    it("Should handle multiple users staking and withdrawing", async function () {
+      const { owner, otherAccount, staking, nest } = await loadFixture(deployStakingFixture);
+      const amount = ethers.parseEther("100");
+
+      // Transfer tokens to other account
+      await nest.connect(owner).transfer(otherAccount.address, amount);
+
+      // Approve and stake
+      await nest.connect(owner).approve(staking.target, amount);
+      await nest.connect(otherAccount).approve(staking.target, amount);
+
+      await staking.connect(owner).staking(amount);
+      await staking.connect(otherAccount).staking(amount);
+
+      await time.increase(24 * 60 * 60 * 3); // 3 days
+
+      // Withdrawal
+      await staking.connect(owner).withdraw(amount);
+      await staking.connect(otherAccount).withdraw(amount);
+
+      // Check staking amount to 0
+      expect((await staking.stakes(owner.address)).amount).to.equal(0);
+      expect((await staking.stakes(otherAccount.address)).amount).to.equal(0);
+    });
   });
 
   describe("Edge Cases", function () {
-    it("Should handle stake and immediate withdrawal", async function () {});
-    it("Should handle maximum possible stake amount", async function () {});
-    it("Should handle very small stake amounts", async function () {});
+    it("Should handle maximum possible user stake amount", async function () {
+      const { owner, staking, nest } = await loadFixture(deployStakingFixture);
+        const maxAmount = await nest.balanceOf(owner.address);
+
+        await nest.connect(owner).approve(staking.target, maxAmount);
+        await staking.connect(owner).staking(maxAmount);
+
+        const stake = await staking.stakes(owner.address);
+        expect(stake.amount).to.equal(maxAmount);
+    });
+    it("Should handle very small stake amounts", async function () {
+      const { owner, staking, nest } = await loadFixture(deployStakingFixture);
+        const smallAmount = ethers.parseEther("0.000000000000000001");
+
+        await nest.connect(owner).approve(staking.target, smallAmount);
+        await staking.connect(owner).staking(smallAmount);
+
+        const stake = await staking.stakes(owner.address);
+        expect(stake.amount).to.equal(smallAmount);
+    });
   });
 
   describe("Security Tests", function () {
-    it("Should maintain correct balances after failed transactions", async function () {});
-    it("Should not allow withdrawing more than staked", async function () {});
-    it("Should handle token approval changes correctly", async function () {});
+    it("Should maintain correct balances after failed transactions", async function () {
+      const { owner, staking, nest } = await loadFixture(deployStakingFixture);
+      const amount = ethers.parseEther("100");
+
+      const initialBalance = await nest.balanceOf(owner.address);
+
+      // Try to stake without token allowance
+      await expect(staking.connect(owner).staking(amount))
+          .to.be.revertedWith("Need to approve tokens first");
+
+      // Check if balance has changed
+      expect(await nest.balanceOf(owner.address)).to.equal(initialBalance);
+    });
+    it("Should not allow withdrawing more than staked", async function () {
+      const { owner, staking, nest } = await loadFixture(deployStakingFixture);
+      const stakeAmount = ethers.parseEther("100");
+      const withdrawAmount = ethers.parseEther("150");
+
+      await nest.connect(owner).approve(staking.target, stakeAmount);
+      await staking.connect(owner).staking(stakeAmount);
+
+      await expect(staking.connect(owner).withdraw(withdrawAmount))
+          .to.be.revertedWith("Withdrawal amount exceeds staked amount");
+    });
+    it("Should handle token approval changes correctly", async function () {
+      const { owner, staking, nest } = await loadFixture(deployStakingFixture);
+      const amount = ethers.parseEther("100");
+
+      // Approve and disapprove
+      await nest.connect(owner).approve(staking.target, amount);
+      await nest.connect(owner).approve(staking.target, 0);
+
+      // Try to stake
+      await expect(staking.connect(owner).staking(amount))
+          .to.be.revertedWith("Need to approve tokens first");
+    });
   });
 
 });
