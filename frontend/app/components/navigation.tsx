@@ -15,6 +15,7 @@ interface NavigationItems {
 
 const navigation: NavigationItems[] = [
   { name: 'Home', href: '/' },
+  { name: 'Faucet', href: '/faucet' },
   { name: 'Staking', href: '/staking' },
   { name: 'Dashboard', href: '/dashboard' },
   { name: 'Support', href: '/support' }
