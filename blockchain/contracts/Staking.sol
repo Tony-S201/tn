@@ -54,6 +54,13 @@ contract Staking {
         return (userStakeInfo.amount * REWARD_RATE * daysElapsed) / 10000;
     }
 
+    function calcEstimatedRewardsForDays(uint256 _amount, uint256 _days) public pure returns(uint256) {
+        if (_amount == 0 || _days == 0) return 0;
+
+        // Same than calcrewards
+        return (_amount * REWARD_RATE * _days) / 10000;
+    }
+
     function withdraw(uint256 _amount) external {
         uint256 stakedAmount = stakes[msg.sender].amount;
         

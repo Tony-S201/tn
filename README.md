@@ -113,22 +113,32 @@ Stack:
 
 **Commmands:**
 
-```
-// Compile contracts (after each contract edit)
+```bash
+# Compile contracts (after each contract edit)
 $ yarn hardhat compile
 
-// Run local hardhat node
+# Run local hardhat node
 $ yarn hardhat node
 
-// Run tests
+# Run tests
 $ yarn hardhat test
 
-// Test Coverage
+# Test Coverage
 $ yarn hardhat coverage
 
-// Deploy a contract locally using Ignition module (e.g. Lock.js module for Lock contract)
+# Deploy a contract locally using Ignition module (e.g. Lock.js module for Lock contract)
 $ yarn hardhat ignition deploy ./ignition/modules/Lock.js --network localhost
 
-// Deploy the same contract for another network (network need to be configurate in hardhat.config.js file)
+# Deploy the same contract for another network (network need to be configurate in hardhat.config.js file)
 $ yarn hardhat ignition deploy ./ignition/modules/Lock.js --network <your-network>
+```
+
+### Deployment order
+
+```bash
+# Dont forget to run the local node before and configure local node in hardhat.config.js file
+$ yarn hardhat ignition deploy ignition/modules/NestModule.js --network localhost
+$ yarn hardhat ignition deploy ignition/modules/StakedNestModule.js --network localhost
+$ yarn hardhat ignition deploy ignition/modules/FaucetModule.js --network localhost
+$ yarn hardhat ignition deploy ignition/modules/StakingModule.js --network localhost
 ```
