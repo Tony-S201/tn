@@ -19,9 +19,6 @@ Stack:
 **Necessary Environment Variables:**
 - NEXT_PUBLIC_WALLET_CONNECT_ID
 - NEXT_PUBLIC_API_URL
-- NEXT_PUBLIC_NEST_ADDRESS (contract address)
-- NEXT_PUBLIC_STNEST_ADDRESS (contract address)
-- NEXT_PUBLIC_STAKING_ADDRESS (contract address)
 
 Configuration .env file:
 ```bash
@@ -125,20 +122,17 @@ $ yarn hardhat test
 
 # Test Coverage
 $ yarn hardhat coverage
-
-# Deploy a contract locally using Ignition module (e.g. Lock.js module for Lock contract)
-$ yarn hardhat ignition deploy ./ignition/modules/Lock.js --network localhost
-
-# Deploy the same contract for another network (network need to be configurate in hardhat.config.js file)
-$ yarn hardhat ignition deploy ./ignition/modules/Lock.js --network <your-network>
 ```
 
-### Deployment order
+**How to start:**
 
 ```bash
-# Dont forget to run the local node before and configure local node in hardhat.config.js file
-$ yarn hardhat ignition deploy ignition/modules/NestModule.js --network localhost
-$ yarn hardhat ignition deploy ignition/modules/StakedNestModule.js --network localhost
-$ yarn hardhat ignition deploy ignition/modules/FaucetModule.js --network localhost
-$ yarn hardhat ignition deploy ignition/modules/StakingModule.js --network localhost
+# Run the local node
+$ yarn hardhat node
+
+# Compile contracts
+$ yarn hardhat compile
+
+# Deployment command
+$ yarn hardhat run scripts/deploy.js --network localhost
 ```
