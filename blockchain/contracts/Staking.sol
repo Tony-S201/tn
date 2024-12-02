@@ -8,8 +8,9 @@ contract Staking {
     IERC20 public immutable nestToken; // Token for staking and reward
     StakedNest public immutable stNest; // Receipt token when stake
 
-    uint256 public constant REWARD_RATE = 1000; // 10% daily
+    uint256 public constant REWARD_RATE = 1000; // 10% daily = 1000/10000
     uint256 public constant REWARD_RATE_DENOMINATOR = 10000;
+    uint256 public constant SECONDS_IN_DAY = 86400;
 
     uint256 public totalStaked;
     mapping(address => uint256) public stakeTimestamp;
@@ -65,10 +66,10 @@ contract Staking {
         if (currentTime <= stakingTime) return 0;
 
         uint256 timeElapsed = currentTime - stakingTime;
-        uint256 daysElapsed = timeElapsed / 86400;
-        if (daysElapsed == 0) return 0;
+        uint256 exactDays = (timeElapsed * REWARD_RATE_DENOMINATOR) / SECONDS_IN_DAY;
+        uint256 rewards = (stakedAmount * REWARD_RATE * exactDays) / (REWARD_RATE_DENOMINATOR * REWARD_RATE_DENOMINATOR);
 
-        return (stakedAmount * REWARD_RATE * daysElapsed) / REWARD_RATE_DENOMINATOR;
+        return rewards;
     }
 
     function calcEstimatedRewardsForDays(uint256 _amount, uint256 _days) public pure returns(uint256) {
