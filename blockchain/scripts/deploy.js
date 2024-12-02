@@ -33,10 +33,15 @@ async function main() {
   await staking.waitForDeployment();
   console.log("Staking deployed to:", await staking.getAddress());
 
-  // Setup permissions for staking contract and initial transfer of 1,000,000 NEST to faucet contract
+  // Setup permissions for staking contract and initial transfer of 1,000,000 NEST from deployer to faucet contract
   const MINTER_ROLE = await stakedNest.MINTER_ROLE();
   await stakedNest.grantRole(MINTER_ROLE, await staking.getAddress());
   await nest.transfer(await faucet.getAddress(), "1000000000000000000000000");
+
+  // Add initial rewards from deployer to staking contract
+  const initialRewards = ethers.parseEther("1000000"); // 1,000,000 NEST tokens to Staking contract for rewards
+  await nest.approve(staking.target, initialRewards);
+  await staking.addRewards(initialRewards);
 
   /* WRITE IN CONST FILE PART - LOCAL ONLY */
   if(process.env.NODE_ENV !== 'production') {

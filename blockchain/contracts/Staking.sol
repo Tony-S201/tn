@@ -2,79 +2,110 @@
 pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./StakedNest.sol";
 
 contract Staking {
-    IERC20 public stakingToken;
-    IERC20 public rewardToken;
+    IERC20 public immutable nestToken; // Token for staking and reward
+    StakedNest public immutable stNest; // Receipt token when stake
 
-    struct StakeInfo {
-        uint256 amount;
-        uint256 timestamp;
+    uint256 public constant REWARD_RATE = 1000; // 10% daily
+    uint256 public constant REWARD_RATE_DENOMINATOR = 10000;
+
+    uint256 public totalStaked;
+    mapping(address => uint256) public stakeTimestamp;
+
+    event RewardsAdded(address indexed provider, uint256 amount);
+    event Staked(address indexed user, uint amount);
+    event Unstaked(address indexed user, uint amount, uint rewards);
+
+    constructor(address _token, address _sToken) {
+        nestToken = IERC20(_token); // Define staking token.
+        stNest = StakedNest(_sToken); // Define reward token.
     }
 
-    mapping(address => StakeInfo) public stakes; // StakeInfo for each address
-    uint256 constant REWARD_RATE = 1000; // Reward rate, 10% daily
+    function stake(uint256 _amount) external {
+        require(_amount > 0, "Amount must be > 0");
+        require(nestToken.allowance(msg.sender, address(this)) >= _amount, "Need approval");
 
-    event Staked(address staker, uint amount);
-    event Withdraw(address staker, uint _amount, uint _rewards);
+        // Transfer NEST tokens to contract
+        uint256 balanceBefore = nestToken.balanceOf(address(this));
+        require(nestToken.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
 
-    constructor(address _stakingToken, address _rewardToken) {
-        stakingToken = IERC20(_stakingToken); // Define staking token.
-        rewardToken = IERC20(_rewardToken); // Define reward token.
-    }
+        uint256 balanceAfter = nestToken.balanceOf(address(this));
+        require(balanceAfter - balanceBefore == _amount, "Transfer amount mismatch");
 
-    function staking(uint _amount) external {
-        // Check conditions
-        require(_amount > 0, "Amount must be higher than 0");
-        require(stakingToken.balanceOf(msg.sender) > 0, "Not enough token");
+        // Mint stNEST tokens 1:1
+        stNest.mint(msg.sender, _amount);
 
-        // Check approval
-        uint256 allowance = stakingToken.allowance(msg.sender, address(this));
-        require(allowance >= _amount, "Need to approve tokens first");
+        // Update state
+        stakeTimestamp[msg.sender] = block.timestamp;
+        totalStaked += _amount;
 
-        // Transfer tokens to the contract
-        stakingToken.transferFrom(msg.sender, address(this), _amount);
-
-        // Update stake informations
-        stakes[msg.sender].amount += _amount;
-        stakes[msg.sender].timestamp = block.timestamp;
-
-        // Emit event
         emit Staked(msg.sender, _amount);
     }
 
-    function calcRewards(address _user) public view returns(uint256) {
-        StakeInfo memory userStakeInfo = stakes[_user];
-        if (userStakeInfo.amount == 0) return 0;
+    function addRewards(uint256 _amount) external {
+        require(_amount > 0, "Amount must be greater than 0");
+        
+        uint256 balanceBefore = nestToken.balanceOf(address(this));
+        require(nestToken.transferFrom(msg.sender, address(this), _amount), "Transfer failed");
 
-        uint256 currentDay = block.timestamp / 86400;
-        uint256 stakingDay = userStakeInfo.timestamp / 86400;
-        uint256 daysElapsed = currentDay - stakingDay;
+        uint256 balanceAfter = nestToken.balanceOf(address(this));
+        require(balanceAfter - balanceBefore == _amount, "Transfer amount mismatch");
+        
+        emit RewardsAdded(msg.sender, _amount);
+    }
 
-        return (userStakeInfo.amount * REWARD_RATE * daysElapsed) / 10000;
+    function calcRewards(address _user) public view returns (uint256) {
+        uint256 stakedAmount = stNest.balanceOf(_user);
+        if (stakedAmount == 0) return 0;
+
+        uint256 currentTime = block.timestamp;
+        uint256 stakingTime = stakeTimestamp[_user];
+        if (currentTime <= stakingTime) return 0;
+
+        uint256 timeElapsed = currentTime - stakingTime;
+        uint256 daysElapsed = timeElapsed / 86400;
+        if (daysElapsed == 0) return 0;
+
+        return (stakedAmount * REWARD_RATE * daysElapsed) / REWARD_RATE_DENOMINATOR;
     }
 
     function calcEstimatedRewardsForDays(uint256 _amount, uint256 _days) public pure returns(uint256) {
         if (_amount == 0 || _days == 0) return 0;
 
-        // Same than calcrewards
-        return (_amount * REWARD_RATE * _days) / 10000;
+        return (_amount * REWARD_RATE * _days) / REWARD_RATE_DENOMINATOR;
     }
 
-    function withdraw(uint256 _amount) external {
-        uint256 stakedAmount = stakes[msg.sender].amount;
+    function unstake(uint256 _amount) external {
+        uint256 stakedAmount = stNest.balanceOf(msg.sender);
+        require(_amount > 0 && _amount <= stakedAmount, "Invalid amount");
+
+        uint256 rewards = calcRewards(msg.sender);
+        uint256 totalToSend = _amount + rewards;
+
+        // Check if contract has a sufficient amount of NEST to reward
+        require(nestToken.balanceOf(address(this)) >= totalToSend, "Insufficient balance");
+
+        // Burn stNEST tokens
+        stNest.burn(msg.sender, _amount);
+
+        // Transfer NEST tokens (initial stake + rewards)
+        nestToken.transfer(msg.sender, totalToSend);
         
-        require(stakedAmount > 0, "Staked amount must be higher than 0");
-        require(_amount <= stakedAmount, "Withdrawal amount exceeds staked amount");
+        // Update state
+        totalStaked -= _amount;
+        stakeTimestamp[msg.sender] = block.timestamp;
 
-        uint256 rewards = calcRewards(msg.sender); // Get reward amount
-
-        stakes[msg.sender].amount -= _amount; // Update current stake amount
-
-        // Transfer tokens and rewards
-        stakingToken.transfer(msg.sender, stakedAmount);
-        rewardToken.transfer(msg.sender, rewards);
-
-        emit Withdraw(msg.sender, _amount, rewards);
+        emit Unstaked(msg.sender, _amount, rewards);
     }
+
+    function getStakedBalance(address _user) external view returns (uint256) {
+        return stNest.balanceOf(_user);
+    }
+
+    function getContractNestBalance() external view returns (uint256) {
+        return nestToken.balanceOf(address(this));
+    }
+
 }
