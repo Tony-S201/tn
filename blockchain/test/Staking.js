@@ -238,7 +238,10 @@ describe("Staking contract", function () {
       await time.increase(24 * 60 * 60); // 1 jour
   
       const initialNestBalance = await nest.balanceOf(owner.address);
-      const expectedRewards = await staking.calcRewards(owner.address);
+      const rawRewards = await staking.calcRewards(owner.address);
+      // Calculate rewards after 2% burn
+      const burnRate = await staking.BURN_RATE();
+      const expectedRewards = rawRewards * (1000n - burnRate) / 1000n;
   
       await staking.connect(owner).unstake(stakeAmount);
   
@@ -248,26 +251,29 @@ describe("Staking contract", function () {
       expect(await stNest.balanceOf(owner.address)).to.equal(0);
       expect(await staking.totalStaked()).to.equal(0);
     });
-
+  
     it("Should emit Unstaked event", async function () {
       const { owner, otherAccount, staking, nest } = await loadFixture(deployStakingFixture);
       const stakeAmount = ethers.parseEther("100");
       const rewardAmount = ethers.parseEther("1000");
-
+  
       // Add rewards to staking contract
       await nest.transfer(otherAccount.address, rewardAmount);
       await nest.connect(otherAccount).approve(staking.target, rewardAmount);
       await staking.connect(otherAccount).addRewards(rewardAmount);
-
+  
       await nest.connect(owner).approve(staking.target, stakeAmount);
       await staking.connect(owner).stake(stakeAmount);
-
+  
       await time.increase(24 * 60 * 60);
-      const rewards = await staking.calcRewards(owner.address);
-
+      const rawRewards = await staking.calcRewards(owner.address);
+      // Calculate rewards after 2% burn
+      const burnRate = await staking.BURN_RATE();
+      const expectedRewards = rawRewards * (1000n - burnRate) / 1000n;
+  
       await expect(staking.connect(owner).unstake(stakeAmount))
-        .to.emit(staking, "Unstaked")
-        .withArgs(owner.address, stakeAmount, rewards);
+          .to.emit(staking, "Unstaked")
+          .withArgs(owner.address, stakeAmount, expectedRewards);
     });
   });
 
@@ -337,15 +343,18 @@ describe("Staking contract", function () {
       await time.increaseTo(initialTimestamp + (86400 * numberOfDays));
   
       // Get rewards directly from contract for verification
-      const contractRewards = await staking.calcRewards(owner.address);
+      const rawRewards = await staking.calcRewards(owner.address);
+      // Calculate rewards after 2% burn
+      const burnRate = await staking.BURN_RATE();
+      const expectedRewards = rawRewards * (1000n - burnRate) / 1000n;
   
       // Withdraw
       await staking.connect(owner).unstake(amount);
   
       const finalBalance = await nest.balanceOf(owner.address);
   
-      // After unstaking, we should have exactly our initial balance back
-      expect(finalBalance).to.be.equal(balanceAfterStake + amount + contractRewards);
+      // After unstaking, we should have: initial balance + staked amount + rewards after burn
+      expect(finalBalance).to.be.equal(balanceAfterStake + amount + expectedRewards);
       expect(await stNest.balanceOf(owner.address)).to.equal(0);
       expect(await staking.totalStaked()).to.equal(0);
     });
@@ -393,8 +402,10 @@ describe("Staking contract", function () {
       // Advance time
       await time.increase(24 * 60 * 60); // 1 day
   
-      // Calculate expected rewards
-      const expectedRewards = await staking.calcRewards(owner.address);
+      // Calculate expected rewards with burn
+      const rawRewards = await staking.calcRewards(owner.address);
+      const burnRate = await staking.BURN_RATE();
+      const expectedRewards = rawRewards * (1000n - burnRate) / 1000n;
   
       // Verify emit event on unstake
       await expect(staking.connect(owner).unstake(amount))
