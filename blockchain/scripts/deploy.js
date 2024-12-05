@@ -3,6 +3,8 @@ const fs = require("fs");
 const path = require("path");
 
 async function main() {
+  // Deployer address
+  const [deployer] = await hre.ethers.getSigners();
 
   /* DEPLOYMENT PART */
 
@@ -51,18 +53,30 @@ async function main() {
   await nest.approve(staking.target, initialRewards);
   await staking.addRewards(initialRewards);
 
-  // Setup approvals for LiquidityPool
-  // Approve LiquidityPool to spend NEST tokens (set to max uint256 for simplicity)
-  const maxApproval = ethers.MaxUint256;
-  await nest.approve(liquidityPool.target, maxApproval);
+  // Setup initial liquidity
+  const initialLiquidityNest = ethers.parseEther("100");
+  const initialLiquidityETH = ethers.parseEther("0.1");
+  const deadline = Math.floor(Date.now() / 1000) + 60 * 20; // 20 minutes from now
+
+  // Approve NEST tokens for liquidity pool
+  await nest.approve(liquidityPool.target, initialLiquidityNest);
   console.log("LiquidityPool approved to spend NEST tokens");
 
-  // Add initial liquidity to the pool (optional)
-  const initialLiquidityNest = ethers.parseEther("10"); // 10 NEST
-  const initialLiquidityETH = ethers.parseEther("0.01"); // 0.01 ETH
-  await nest.approve(liquidityPool.target, initialLiquidityNest);
-  await liquidityPool.mint(deployer.address, { value: initialLiquidityETH });
+  // Add initial liquidity
+  await liquidityPool.addLiquidity(
+    initialLiquidityNest, // amountTokenDesired
+    initialLiquidityNest, // amountTokenMin
+    initialLiquidityETH,  // amountETHMin
+    deployer.address,     // to
+    deadline,            // deadline
+    { value: initialLiquidityETH }
+  );
   console.log("Initial liquidity added to the pool");
+
+  // Verify the reserves
+  const [reserve0, reserve1] = await liquidityPool.getReserves();
+  console.log("ETH Reserve:", ethers.formatEther(reserve0));
+  console.log("NEST Reserve:", ethers.formatEther(reserve1));
 
   /* WRITE IN CONST FILE PART - LOCAL ONLY */
   if(process.env.NODE_ENV !== 'production') {

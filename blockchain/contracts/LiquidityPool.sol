@@ -47,12 +47,63 @@ contract LiquidityPool is ERC20, ReentrancyGuard {
     emit Sync(uint112(balance0), uint112(balance1));
   }
 
-  function mint(address to) external payable nonReentrant returns (uint liquidity) {
+  function addLiquidity(
+    uint amountTokenDesired,    // Needed NEST amount
+    uint amountTokenMin,        // Min NEST allowed
+    uint amountETHMin,         // Min ETH allowed
+    address to,                // LP tokens receiver address
+    uint deadline              // Max execution date
+  ) external payable returns (uint amountToken, uint amountETH, uint liquidity) {
+        require(deadline >= block.timestamp, 'EXPIRED');
+    
+    (uint reserveETH, uint reserveToken) = getReserves();
+    
+    if (reserveETH == 0 && reserveToken == 0) {
+        amountToken = amountTokenDesired;
+        amountETH = msg.value;
+    } else {
+        amountETH = quote(amountTokenDesired, reserveToken, reserveETH);
+        require(msg.value >= amountETH, "INSUFFICIENT_ETH");
+        amountToken = amountTokenDesired;
+    }
+    
+    require(amountETH >= amountETHMin, "INSUFFICIENT_ETH_AMOUNT");
+    require(amountToken >= amountTokenMin, "INSUFFICIENT_TOKEN_AMOUNT");
+    
+    // Transfert NEST to contract
+    require(token.transferFrom(msg.sender, address(this), amountToken), "TRANSFER_FAILED");
+    
+    // Mint LP tokens
+    liquidity = _mintLiquidity(to);
+    
+    // Refund excess ETH
+    if (msg.value > amountETH) {
+        payable(msg.sender).transfer(msg.value - amountETH);
+    }
+    
+    return (amountToken, amountETH, liquidity);
+  }
+
+  function quote(uint amountA, uint reserveA, uint reserveB) public pure returns (uint amountB) {
+    require(amountA > 0, 'INSUFFICIENT_AMOUNT');
+    require(reserveA > 0 && reserveB > 0, 'INSUFFICIENT_LIQUIDITY');
+    
+    // formule: amountB = (amountA * reserveB) / reserveA
+    amountB = (amountA * reserveB) / reserveA;
+  }
+
+  function _mintLiquidity(address to) private returns (uint liquidity) {
     (uint _reserve0, uint _reserve1) = getReserves();
-    uint balance0 = address(this).balance - msg.value;
+    
+    uint balance0 = address(this).balance;
+    uint amount0 = balance0 - _reserve0;
+    
+    // Get token balance and calculate amount1
     uint balance1 = token.balanceOf(address(this));
-    uint amount0 = address(this).balance - balance0;
+    require(balance1 > _reserve1, "INSUFFICIENT_TOKEN_AMOUNT");
     uint amount1 = balance1 - _reserve1;
+    
+    require(amount0 > 0 && amount1 > 0, "INSUFFICIENT_INPUT_AMOUNT");
 
     uint _totalSupply = totalSupply();
     if (_totalSupply == 0) {
@@ -64,9 +115,9 @@ contract LiquidityPool is ERC20, ReentrancyGuard {
         );
     }
     require(liquidity > 0, 'INSUFFICIENT_LIQUIDITY_MINTED');
+    
     _mint(to, liquidity);
-
-    _update(balance0 + amount0, balance1);
+    _update(balance0, balance1);
     emit Mint(msg.sender, amount0, amount1);
   }
 
