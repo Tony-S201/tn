@@ -89,7 +89,7 @@ contract LiquidityPool is ERC20, ReentrancyGuard {
     require(reserveA > 0 && reserveB > 0, 'INSUFFICIENT_LIQUIDITY');
     
     // formule: amountB = (amountA * reserveB) / reserveA
-    amountB = (amountA * reserveB) / reserveA;
+    return (amountA * reserveB) / reserveA; // Return amountB theoric price
   }
 
   function _mintLiquidity(address to) private returns (uint liquidity) {
@@ -147,6 +147,7 @@ contract LiquidityPool is ERC20, ReentrancyGuard {
     emit Swap(msg.sender, 0, amountIn, amountOut, 0, to);
   }
 
+  // Return real price during swap (including slippage + fees)
   function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) public pure returns (uint amountOut) {
     require(amountIn > 0, 'INSUFFICIENT_INPUT_AMOUNT');
     require(reserveIn > 0 && reserveOut > 0, 'INSUFFICIENT_LIQUIDITY');
