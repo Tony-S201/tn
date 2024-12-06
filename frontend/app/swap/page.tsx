@@ -1,6 +1,6 @@
 'use client';
 
-import { Typography, Button, Card, CardContent, CardActions, TextField, IconButton } from '@mui/material';
+import { Typography, Button, Card, CardContent, CardActions, TextField, IconButton, Slider } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
@@ -18,6 +18,7 @@ const SwapPage: React.FunctionComponent = (): JSX.Element => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [reserves, setReserves] = useState<{ eth: bigint; nest: bigint }>({ eth: BigInt(0), nest: BigInt(0) });
+  const [slippage, setSlippage] = useState<number>(0.5); // Default 0.5% slippage
 
   // Fetch reserves
   useEffect(() => {
@@ -47,24 +48,32 @@ const SwapPage: React.FunctionComponent = (): JSX.Element => {
   }, []);
 
   // Calculate output amount based on input
-  const calculateOutput = (input: string) => {
+  const calculateOutput = async (input: string) => {
     if (!input || isNaN(parseFloat(input))) {
       setOutputAmount('');
       return;
     }
 
-    const inputAmountWei = BigInt(parseFloat(input) * 1e18);
-    let outputAmountWei: bigint;
+    try {
+      const inputAmountWei = BigInt(parseFloat(input) * 1e18);
+      
+      // Get amount from contract
+      const amountOut = await publicClient.readContract({
+        address: liquidityPoolAddress,
+        abi: liquidityPoolAbi,
+        functionName: 'getAmountOut',
+        args: [
+          inputAmountWei,
+          isEthToToken ? reserves.eth : reserves.nest,
+          isEthToToken ? reserves.nest : reserves.eth
+        ]
+      }) as bigint;
 
-    if (isEthToToken) {
-      // ETH to Token
-      outputAmountWei = (inputAmountWei * reserves.nest) / (reserves.eth + inputAmountWei);
-    } else {
-      // Token to ETH
-      outputAmountWei = (inputAmountWei * reserves.eth) / (reserves.nest + inputAmountWei);
+      setOutputAmount((Number(amountOut) / 1e18).toFixed(6));
+    } catch (err) {
+      console.error('Error calculating output:', err);
+      setOutputAmount('');
     }
-
-    setOutputAmount((Number(outputAmountWei) / 1e18).toFixed(6));
   };
 
   const handleSwitch = () => {
@@ -87,8 +96,12 @@ const SwapPage: React.FunctionComponent = (): JSX.Element => {
     try {
       const walletClient = createWalletClientInstance();
       const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200); // 20 minutes
-      const inputAmountWei = BigInt(parseFloat(inputAmount) * 1e18);
-      const minOutputAmountWei = BigInt(parseFloat(outputAmount) * 0.99 * 1e18); // 1% slippage
+      const inputAmountWei = BigInt(parseFloat(inputAmount) * 1e18); // 18 decimals
+      
+      // Calc min amount to receive with current slippage
+      const minOutputAmountWei = BigInt(
+        parseFloat(outputAmount) * (1 - slippage / 100) * 1e18
+      );
 
       if (isEthToToken) {
         // ETH to Token swap
@@ -98,9 +111,9 @@ const SwapPage: React.FunctionComponent = (): JSX.Element => {
           functionName: 'swapExactETHForTokens',
           account: address,
           args: [
-            minOutputAmountWei,  // amountOutMin
-            address,             // to
-            deadline            // deadline
+            minOutputAmountWei,
+            address,
+            deadline
           ],
           value: inputAmountWei
         });
@@ -109,7 +122,7 @@ const SwapPage: React.FunctionComponent = (): JSX.Element => {
         await publicClient.waitForTransactionReceipt({ hash });
       } else {
         // Token to ETH swap
-        // First approve tokens
+        // First approve token
         const { request: approveRequest } = await publicClient.simulateContract({
           address: nestTokenAddress,
           abi: nestTokenAbi,
@@ -147,6 +160,23 @@ const SwapPage: React.FunctionComponent = (): JSX.Element => {
       setLoading(false);
     }
   };
+
+  const SlippageSelector = () => (
+    <div className="my-4">
+      <Typography variant="body2" gutterBottom>
+        Slippage Tolerance: {slippage}%
+      </Typography>
+      <Slider
+        value={slippage}
+        onChange={(_, newValue) => setSlippage(newValue as number)}
+        step={0.1}
+        marks
+        min={0.1}
+        max={5}
+        valueLabelDisplay="auto"
+      />
+    </div>
+  );
 
   return (
     <div className="bg-white py-24 sm:py-32">
@@ -198,6 +228,23 @@ const SwapPage: React.FunctionComponent = (): JSX.Element => {
                     endAdornment: <Typography>{isEthToToken ? "NEST" : "ETH"}</Typography>
                   }}
                 />
+
+                <SlippageSelector />
+
+                {inputAmount && outputAmount && (
+                  <div className="mt-4 space-y-2">
+                    <Typography variant="body2">
+                      Rate: 1 {isEthToToken ? "ETH" : "NEST"} = {
+                        (parseFloat(outputAmount) / parseFloat(inputAmount)).toFixed(6)
+                      } {isEthToToken ? "NEST" : "ETH"}
+                    </Typography>
+                    <Typography variant="body2">
+                      Minimum received: {
+                        (parseFloat(outputAmount) * (1 - slippage / 100)).toFixed(6)
+                      } {isEthToToken ? "NEST" : "ETH"}
+                    </Typography>
+                  </div>
+                )}
 
                 {error && (
                   <Typography color="error">

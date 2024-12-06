@@ -15,8 +15,8 @@ contract LiquidityPool is ERC20, ReentrancyGuard {
   event Swap(address indexed sender, uint amount0In, uint amount1In, uint amount0Out, uint amount1Out, address indexed to);
   event Sync(uint112 reserve0, uint112 reserve1);
 
-  uint private reserve0; // ETH reserve
-  uint private reserve1; // NEST reserve
+  uint public reserve0; // ETH reserve
+  uint public reserve1; // NEST reserve
   uint private unlocked = 1;
     
   // 0.3% fee = 0.003
@@ -39,6 +39,7 @@ contract LiquidityPool is ERC20, ReentrancyGuard {
   function getReserves() public view returns (uint _reserve0, uint _reserve1) {
     _reserve0 = reserve0;
     _reserve1 = reserve1;
+    return (_reserve0, _reserve1);
   }
 
   function _update(uint balance0, uint balance1) private {
